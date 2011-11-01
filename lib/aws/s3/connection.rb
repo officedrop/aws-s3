@@ -238,7 +238,7 @@ module AWS
             begin
               yield
             ensure
-              self.current_connection.http.disconnect
+              self.current_connection.http.finish
               self.current_connection = nil
             end
 
