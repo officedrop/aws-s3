@@ -2,10 +2,18 @@ module AWS
   module S3
     class Connection #:nodoc:
       class << self
-        def connect(options = {})
+        def connect(options = default_options)
           new(options)
         end
-        
+
+        def default_options
+          @default_options ||= {}
+        end
+
+        def default_options=( value )
+          @default_options = value
+        end
+
         def prepare_path(path)
           path = path.remove_extended unless path.valid_utf8?
 
@@ -210,12 +218,32 @@ module AWS
           # If not connection has been established yet, NoConnectionEstablished will be raised.
           def connection
             if connected?
-              connections[connection_name] || default_connection
+              current_connection || connections[connection_name] || default_connection
             else
               raise NoConnectionEstablished
             end
           end
-          
+
+          def current_connection
+            @current_connection
+          end
+
+          def current_connection=( connection )
+            @current_connection = connection
+          end
+
+          def with_default_connection
+
+            self.current_connection = AWS::S3::Connection.connect( AWS::S3::Connection.default_options )
+            begin
+              yield
+            ensure
+              self.current_connection.http.disconnect
+              self.current_connection = nil
+            end
+
+          end
+
           # Returns true if a connection has been made yet.
           def connected?
             !connections.empty?
